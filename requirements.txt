@@ -1,0 +1,27 @@
+beautifulsoup4==4.15.0
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.1
+curl_cffi==0.16.2
+idna==3.19
+lxml==6.1.2
+multitasking==0.0.13
+numpy @ file:///home/builder/.termux-build/python-numpy/src/dist/numpy-2.4.4-cp314-cp314-android_aarch64.whl#sha256=68ef31f0d8925d96da2b5e014c2c3d32a16dd68887329eeecb7f3a548222e24d
+pandas @ file:///home/builder/.termux-build/python-pandas/src/dist/pandas-3.0.5-cp314-cp314-android_aarch64.whl#sha256=2a35f0521e37d4736d43c1be8e440673d00f1d929bf5bc07090d0d6519e987bd
+peewee==4.4.0
+platformdirs==4.11.7
+plumbum==1.7.0
+proot-distro @ file:///home/builder/.termux-build/proot-distro/src
+protobuf==7.36.1
+pycparser==3.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.3
+pytz==2026.3.post1
+requests==2.34.2
+rpyc==6.0.2
+six==1.17.0
+soupsieve==2.9.2
+typing_extensions==4.16.0
+urllib3==2.7.0
+websockets==17.1
