@@ -1,22 +1,39 @@
 import os
 import time
 import random
+import threading
 from collections import deque
+from flask import Flask, jsonify
 from neonize.client import NewClient
 from neonize.events import MessageEvent
 from openai import OpenAI
 
-# 1. Initialize OpenAI client
-# Ensure your environment variable is set: export OPENAI_API_KEY="your-key"
+# 1. Initialize Flask App for Render Keep-Alive
+app = Flask(__name__)
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    """Endpoint that you will ping with your cron job."""
+    return jsonify({"status": "healthy", "timestamp": time.time()}), 200
+
+@app.route('/', methods=['GET'])
+def home():
+    """Default route to check if the app layer is up."""
+    return "WhatsApp Bot & Flask Server are running!", 200
+
+def run_flask():
+    """Runs the Flask server. Render automatically assigns a PORT variable."""
+    port = int(os.environ.get("PORT", 5000))
+    # We set use_reloader=False because it is running inside a thread
+    app.run(host='0.0.0.0', port=port, use_reloader=False)
+
+
+# 2. Initialize OpenAI client
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "YOUR_API_KEY_HERE"))
 
-# 2. In-Memory Stores
-# Tracks whether the bot is enabled/disabled per chat window
+# 3. In-Memory Stores
 BOT_STATUS = {}
-
-# Tracks the rolling chat history per contact (Max 10 messages to save context and tokens)
 CHAT_MEMORY = {}
-
 
 def load_ai_instructions(filename="instructions.md") -> str:
     """Reads the custom markdown instruction file safely from the disk."""
@@ -27,21 +44,17 @@ def load_ai_instructions(filename="instructions.md") -> str:
         print(f"Warning: '{filename}' not found. Falling back to default prompt.")
         return "You are a casual and helpful personal assistant running inside WhatsApp."
 
-
 # Load the Markdown instructions into a global variable at startup
 SYSTEM_INSTRUCTIONS = load_ai_instructions()
 
 
 def get_llm_response(sender_id: str, new_user_message: str) -> str:
     """Appends the new message to memory, queries the LLM with markdown context, and stores the answer."""
-    # Initialize memory deque for this contact if it doesn't exist yet
     if sender_id not in CHAT_MEMORY:
         CHAT_MEMORY[sender_id] = deque(maxlen=10)
         
-    # Append the incoming message from your contact to their specific history queue
     CHAT_MEMORY[sender_id].append({"role": "user", "content": new_user_message})
     
-    # Construct the full payload combining the system file rules with rolling history
     system_prompt = {
         "role": "system", 
         "content": SYSTEM_INSTRUCTIONS
@@ -50,14 +63,11 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
     
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",  # Highly optimized, fast, and cost-efficient for text chat
+            model="gpt-4o-mini",
             messages=messages_payload,
             max_tokens=250
         )
-        
         bot_reply = response.choices.message.content.strip()
-        
-        # Save the AI's response to memory so it remembers what it said in the next turn
         CHAT_MEMORY[sender_id].append({"role": "assistant", "content": bot_reply})
         return bot_reply
         
@@ -68,7 +78,6 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
 
 def on_message(client: NewClient, event: MessageEvent):
     """Event listener that intercepts every incoming WhatsApp notification."""
-    # Extract message safely, bypassing empty media triggers (images/audio/stickers)
     text_message = event.Message.conversation or event.Message.extendedTextMessage.text
     if not text_message:
         return
@@ -77,56 +86,48 @@ def on_message(client: NewClient, event: MessageEvent):
     is_from_me = event.Info.IsFromMe
     clean_msg = text_message.strip().lower()
 
-    # --- COMMAND 1: TURN BOT OFF ---
+    # --- COMMANDS ---
     if "!bot off" in clean_msg:
         BOT_STATUS[sender_id] = False
         if sender_id in CHAT_MEMORY:
-            CHAT_MEMORY[sender_id].clear()  # Clear context to start clean next time
-        client.reply_message(event, "🤖 Assistant paused. I will remain quiet until you type !bot on.")
+            CHAT_MEMORY[sender_id].clear()
+        client.reply_message(event, "🤖 Assistant paused.")
         return
         
-    # --- COMMAND 2: TURN BOT ON ---
     if "!bot on" in clean_msg:
         BOT_STATUS[sender_id] = True
-        client.reply_message(event, "🤖 Assistant activated! I will now manage incoming chats using context memory.")
+        client.reply_message(event, "🤖 Assistant activated!")
         return
 
-    # --- COMMAND 3: LIVE RELOAD MARKDOWN SETTINGS (Admin Only) ---
-    # Only you can trigger this command from your own phone typing
     if is_from_me and "!bot reload" in clean_msg:
         global SYSTEM_INSTRUCTIONS
         SYSTEM_INSTRUCTIONS = load_ai_instructions()
         client.reply_message(event, "🔄 Successfully reloaded 'instructions.md' changes live!")
         return
 
-    # Default State: If a chat has never specified, assume the bot is ON
     if sender_id not in BOT_STATUS:
         BOT_STATUS[sender_id] = True
 
-    # --- AUTO-RESPONSE TRIGGER PIPELINE ---
-    # Only execute if the bot is active for this contact, and you didn't write the message yourself
+    # --- AUTO-RESPONSE ---
     if BOT_STATUS[sender_id] and not is_from_me:
         print(f"Processing chat from {sender_id}: {text_message}")
-        
-        # 1. Fetch response from LLM using memory context
         bot_reply = get_llm_response(sender_id, text_message)
-        
-        # 2. Anti-Ban Humanizing Delay (Waits between 2 to 5 seconds before replying)
         time.sleep(random.randint(2, 5))
-        
-        # 3. Fire the response packet back into the WhatsApp thread
         client.reply_message(event, bot_reply)
 
 
 def main():
-    # 'session.db' caches credentials locally so you don't scan the QR code on every single restart
+    # 1. Start the Flask server on a background thread so it doesn't block WhatsApp
+    print("Starting background Flask server for Render keep-alive...")
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True  # Allows the thread to exit when the main program exits
+    flask_thread.start()
+
+    # 2. Start the core WhatsApp Client connection
     client = NewClient("session.db")
-    
-    # Bind our incoming message handler function to the client event loop
     client.event_handlers.append(on_message)
     
-    print("Launching Python WhatsApp Bot with Markdown context instructions...")
-    print("If this is your first run, please scan the QR code generated in the terminal.")
+    print("Launching Python WhatsApp Bot engine...")
     client.connect()
 
 
