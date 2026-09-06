@@ -127,6 +127,7 @@ def main():
     # 2. Start the core WhatsApp Client connection
     print("Launching Python WhatsApp Bot engine...")
     client.connect()
+    print("Tracking this shit")
 
 
 if __name__ == "__main__":
