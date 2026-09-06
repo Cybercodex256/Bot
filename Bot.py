@@ -24,12 +24,12 @@ def home():
 def run_flask():
     """Runs the Flask server. Render automatically assigns a PORT variable."""
     port = int(os.environ.get("PORT", 5000))
-    # We set use_reloader=False because it is running inside a thread
     app.run(host='0.0.0.0', port=port, use_reloader=False)
 
 
-# 2. Initialize OpenAI client
+# 2. Initialize OpenAI client & Neonize Client
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "YOUR_API_KEY_HERE"))
+client = NewClient("session.db")
 
 # 3. In-Memory Stores
 BOT_STATUS = {}
@@ -44,7 +44,6 @@ def load_ai_instructions(filename="instructions.md") -> str:
         print(f"Warning: '{filename}' not found. Falling back to default prompt.")
         return "You are a casual and helpful personal assistant running inside WhatsApp."
 
-# Load the Markdown instructions into a global variable at startup
 SYSTEM_INSTRUCTIONS = load_ai_instructions()
 
 
@@ -76,6 +75,8 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
         return "Sorry, my brain stumbled. Try messaging me again in a moment! 🤖"
 
 
+# Register the event decorator correctly with Neonize
+@client.event(MessageEv)
 def on_message(client: NewClient, event: MessageEv):
     """Event listener that intercepts every incoming WhatsApp notification."""
     text_message = event.Message.conversation or event.Message.extendedTextMessage.text
@@ -117,21 +118,17 @@ def on_message(client: NewClient, event: MessageEv):
 
 
 def main():
-    # 1. Start the Flask server on a background thread so it doesn't block WhatsApp
+    # 1. Start the Flask server on a background thread
     print("Starting background Flask server for Render keep-alive...")
     flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True  # Allows the thread to exit when the main program exits
+    flask_thread.daemon = True
     flask_thread.start()
 
     # 2. Start the core WhatsApp Client connection
-    client = NewClient("session.db")
-    client.event_handlers.append(on_message)
-    
     print("Launching Python WhatsApp Bot engine...")
     client.connect()
 
 
 if __name__ == "__main__":
     main()
-
 
