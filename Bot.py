@@ -5,7 +5,7 @@ import threading
 from collections import deque
 from flask import Flask, jsonify
 from neonize.client import NewClient
-from neonize.events import MessageEvent
+from neonize.events import MessageEv
 from openai import OpenAI
 
 # 1. Initialize Flask App for Render Keep-Alive
@@ -76,7 +76,7 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
         return "Sorry, my brain stumbled. Try messaging me again in a moment! 🤖"
 
 
-def on_message(client: NewClient, event: MessageEvent):
+def on_message(client: NewClient, event: MessageEv):
     """Event listener that intercepts every incoming WhatsApp notification."""
     text_message = event.Message.conversation or event.Message.extendedTextMessage.text
     if not text_message:
@@ -133,4 +133,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
