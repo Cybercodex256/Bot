@@ -18,7 +18,7 @@ jiter==0.16.0
 linkpreview==0.12.1
 MarkupSafe==3.0.3
 neonize==0.4.3.post0
-openai==3.8.0
+google-genai==2.22.0
 phonenumbers==9.0.38
 pillow==12.3.0
 protobuf==7.36.1

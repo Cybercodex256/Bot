@@ -1,6 +1,6 @@
 {
   "name": "WhatsApp Bot",
-  "description": "WhatsApp Bot with Express server and OpenAI integration",
+  "description": "WhatsApp Bot powered by Google Gemini AI with live web dashboard and multi-device pairing",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
