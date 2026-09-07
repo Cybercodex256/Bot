@@ -691,7 +691,7 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
             temperature=0.7
         )
         response = gemini_client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="​gemini-3.1-flash-lite",
             contents=gemini_contents,
             config=config
         )
@@ -734,7 +734,7 @@ def get_private_ai_answer(prompt: str, is_research: bool = False) -> str:
             temperature=0.4 if is_research else 0.7
         )
         response = gemini_client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="​gemini-3.1-flash-lite",
             contents=prompt,
             config=config
         )
