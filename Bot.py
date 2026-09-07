@@ -691,7 +691,7 @@ def get_llm_response(sender_id: str, new_user_message: str) -> str:
             temperature=0.7
         )
         response = gemini_client.models.generate_content(
-            model="​gemini-2.5-flash-lite",
+            model="gemini-2.5-flash",
             contents=gemini_contents,
             config=config
         )
@@ -734,7 +734,7 @@ def get_private_ai_answer(prompt: str, is_research: bool = False) -> str:
             temperature=0.4 if is_research else 0.7
         )
         response = gemini_client.models.generate_content(
-            model="​gemini-2.5-flash-lite",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=config
         )
@@ -813,7 +813,7 @@ def get_system_status_text() -> str:
         f"• Muted Chats: {muted_count}\n"
         f"• Allowed / Whitelist Chats: {allowed_count}\n"
         f"• Active Context Memory: {len(CHAT_MEMORY)} chats\n"
-        f"• AI Model: `Gemini 3.8 Flash (Google GenAI)`"
+        f"• AI Model: `Gemini 2.5 Flash (Google GenAI)`"
     )
 
 def send_reply(client_inst: NewClient, event: MessageEv, text: str):
